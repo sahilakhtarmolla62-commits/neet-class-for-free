@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lifetime Video Vault</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+  <style>
+    :root{
+      --bg0:#070A12;
+      --bg1:#0B1024;
+      --card: rgba(255,255,255,.06);
+      --card2: rgba(255,255,255,.08);
+      --border: rgba(255,255,255,.10);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.70);
+      --muted2: rgba(255,255,255,.55);
+      --shadow: 0 20px 60px rgba(0,0,0,.45);
+      --shadow2: 0 16px 40px rgba(0,0,0,.35);
+      --ring: rgba(129,140,248,.55);
+      --accent1:#7C3AED;
+      --accent2:#06B6D4;
+      --accent3:#22C55E;
+      --warn:#F59E0B;
+      --danger:#EF4444;
+    }
+
+    html, body { height: 100%; background: radial-gradient(1200px 600px at 15% 10%, rgba(124,58,237,.25), transparent 60%),
+                                     radial-gradient(1000px 500px at 85% 10%, rgba(6,182,212,.20), transparent 55%),
+                                     radial-gradient(1200px 600px at 50% 95%, rgba(34,197,94,.10), transparent 55%),
+                                     linear-gradient(180deg, var(--bg0), var(--bg1)); color: var(--text); }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+
+    .glass {
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.05));
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow2);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .glass-soft {
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.04));
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .btn {
+      border: 1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+      box-shadow: 0 10px 20px rgba(0,0,0,.25);
+      transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(0,0,0,.34); background: linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.07)); }
+    .btn:active { transform: translateY(0px); box-shadow: 0 10px 20px rgba(0,0,0,.25); }
+
+    .btn-primary {
+      border: 1px solid rgba(124,58,237,.5);
+      background: linear-gradient(135deg, rgba(124,58,237,.95), rgba(6,182,212,.85));
+      box-shadow: 0 18px 45px rgba(124,58,237,.25);
+    }
+    .btn-primary:hover { box-shadow: 0 22px 60px rgba(124,58,237,.30); }
+
+    .input {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      outline: none;
+      transition: box-shadow .18s ease, border-color .18s ease, background .18s ease;
+    }
+    .input:focus {
+      border-color: rgba(129,140,248,.65);
+      box-shadow: 0 0 0 6px rgba(129,140,248,.15);
+      background: rgba(255,255,255,.075);
+    }
+
+    .kbd {
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+    }
+
+    .fade-in { animation: fadeIn .35s ease both; }
+    @keyframes fadeIn { from { opacity:0; transform: translateY(6px);} to {opacity:1; transform: translateY(0);} }
+
+    .skeleton {
+      background: linear-gradient(90deg, rgba(255,255,255,.06), rgba(255,255,255,.12), rgba(255,255,255,.06));
+      background-size: 200% 100%;
+      animation: shimmer 1.2s infinite linear;
+    }
+    @keyframes shimmer { 0%{background-position:0 0;} 100%{background-position:-200% 0;} }
+
+    .modal-backdrop{
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .badge {
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+    }
+
+    .line-clamp-1{
+      overflow:hidden;
+      display:-webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp:1;
+    }
+
+    .line-clamp-2{
+      overflow:hidden;
+      display:-webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp:2;
+    }
+
+    /* Make file input prettier */
+    input[type="file"]::file-selector-button{
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.08);
+      color: rgba(255,255,255,.9);
+      padding: .55rem .85rem;
+      margin-right: .75rem;
+      border-radius: .75rem;
+      cursor: pointer;
+      transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+      box-shadow: 0 10px 20px rgba(0,0,0,.20);
+    }
+    input[type="file"]::file-selector-button:hover{
+      background: rgba(255,255,255,.11);
+      transform: translateY(-1px);
+      box-shadow: 0 14px 28px rgba(0,0,0,.30);
+    }
+
+    /* Reduce motion preference */
+    @media (prefers-reduced-motion: reduce) {
+      .fade-in, .skeleton { animation: none !important; }
+      .btn { transition: none !important; }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <!-- Top Bar -->
+    <header class="glass rounded-2xl p-4 sm:p-5">
+      <div class="flex flex-col gap-4 sm:gap-5">
+        <div class="flex items-start sm:items-center justify-between gap-4">
+          <div class="min-w-0">
+            <div class="flex items-center gap-3">
+              <div class="h-11 w-11 rounded-2xl flex items-center justify-center"
+                   style="background: linear-gradient(135deg, rgba(124,58,237,.95), rgba(6,182,212,.85)); box-shadow: 0 18px 50px rgba(124,58,237,.25); border: 1px solid rgba(255,255,255,.14);">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M15 8.5a3 3 0 1 0 0 6" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                  <path d="M4 7.5a3.5 3.5 0 0 1 3.5-3.5h9A3.5 3.5 0 0 1 20 7.5v9A3.5 3.5 0 0 1 16.5 20h-9A3.5 3.5 0 0 1 4 16.5v-9Z" stroke="white" stroke-width="1.8"/>
+                  <path d="M10 9.5v5l4-2.5-4-2.5Z" fill="white"/>
+                </svg>
+              </div>
+              <div class="min-w-0">
+                <h1 class="text-lg sm:text-xl font-semibold tracking-tight line-clamp-1">Lifetime Video Vault</h1>
+                <p class="text-sm text-white/70 line-clamp-2">Upload and keep your personal videos on this device (stays after refresh). Export a Vault file to share with friends.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 sm:gap-3">
+            <button id="btnHelp" class="btn rounded-xl px-3.5 py-2 text-sm font-medium">
+              Help
+            </button>
+            <button id="btnExport" class="btn rounded-xl px-3.5 py-2 text-sm font-medium">
+              Export Vault
+            </button>
+            <label class="btn rounded-xl px-3.5 py-2 text-sm font-medium cursor-pointer">
+              Import Vault
+              <input id="importInput" type="file" accept=".zip" class="hidden" />
+            </label>
+          </div>
+        </div>
+
+        <div class="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
+          <div class="flex-1 min-w-0">
+            <div class="relative">
+              <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-white/60">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M21 21l-4.3-4.3m1.3-5.2a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <input id="searchInput" class="input w-full rounded-xl pl-10 pr-3 py-2.5 text-sm" placeholder="Search videos by name…" />
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+            <div class="badge rounded-xl px-3 py-2 text-xs sm:text-sm text-white/80">
+              <span class="text-white/60">Videos:</span> <span id="countVideos" class="font-semibold">0</span>
+            </div>
+            <div class="badge rounded-xl px-3 py-2 text-xs sm:text-sm text-white/80">
+              <span class="text-white/60">Stored:</span> <span id="storedSize" class="font-semibold">0 MB</span>
+            </div>
+            <div class="badge rounded-xl px-3 py-2 text-xs sm:text-sm text-white/80 hidden sm:inline-flex">
+              <span class="text-white/60">Tip:</span>&nbsp;Export to share
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main -->
+    <main class="mt-6 sm:mt-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- Upload panel -->
+      <section class="lg:col-span-4">
+        <div class="glass rounded-2xl p-4 sm:p-5">
+          <h2 class="text-base sm:text-lg font-semibold">Upload a Video</h2>
+          <p class="text-sm text-white/70 mt-1">Give it a name, choose a video file, and save. It stays in your browser storage on this device.</p>
+
+          <div class="mt-4 space-y-3">
+            <div>
+              <label class="text-sm text-white/80">Video name</label>
+              <input id="videoName" class="input w-full rounded-xl px-3 py-2.5 text-sm mt-1" placeholder="Example: My Birthday 2026" maxlength="80" />
+              <div class="mt-1 text-xs text-white/55">Tip: Use a unique name so it’s easy to find later.</div>
+            </div>
+
+            <div>
+              <label class="text-sm text-white/80">Choose file</label>
+              <input id="videoFile" class="input w-full rounded-xl px-3 py-2.5 text-sm mt-1" type="file" accept="video/*" />
+              <div id="fileMeta" class="mt-2 text-xs text-white/55 hidden"></div>
+            </div>
+
+            <div class="flex gap-2">
+              <button id="btnSave" class="btn btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold flex-1">
+                Save to Vault
+              </button>
+              <button id="btnClear" class="btn rounded-xl px-4 py-2.5 text-sm font-semibold">
+                Clear
+              </button>
+            </div>
+
+            <div class="glass-soft rounded-xl p-3">
+              <div class="flex items-start gap-3">
+                <div class="mt-0.5 text-white/75">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" stroke="currentColor" stroke-width="1.8"/>
+                    <path d="M12 8v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    <path d="M12 16h.01" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div class="text-xs text-white/70 leading-relaxed">
+                  <div class="font-semibold text-white/85">Important</div>
+                  <div class="mt-1">
+                    This works without a server. Videos are saved in your browser (IndexedDB) on <span class="text-white/85 font-semibold">this device</span>.
+                    To share with friends (or move to another phone/PC), use <span class="text-white/85 font-semibold">Export Vault</span> and send the .zip file. Your friend can import it here.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-xs text-white/55">
+              <div class="flex items-center justify-between gap-3">
+                <span>Storage status</span>
+                <button id="btnEstimate" class="text-white/80 hover:text-white underline underline-offset-4">Refresh</button>
+              </div>
+              <div id="storageBarWrap" class="mt-2 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                <div id="storageBar" class="h-2" style="width:0%; background: linear-gradient(90deg, rgba(124,58,237,.95), rgba(6,182,212,.85), rgba(34,197,94,.75));"></div>
+              </div>
+              <div id="storageText" class="mt-2">Estimating available storage…</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 glass rounded-2xl p-4 sm:p-5">
+          <h3 class="text-base font-semibold">Quick Share</h3>
+          <p class="text-sm text-white/70 mt-1">Export your Vault and share the .zip with your friends.</p>
+          <div class="mt-3 flex gap-2">
+            <button id="btnExportShare" class="btn btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold flex-1">Export & Share</button>
+            <button id="btnCopyLink" class="btn rounded-xl px-4 py-2.5 text-sm font-semibold">Copy Site Link</button>
+          </div>
+          <p class="mt-2 text-xs text-white/55">Note: The site link shares the page. The videos must be shared via Export file.</p>
+        </div>
+      </section>
+
+      <!-- Gallery -->
+      <section class="lg:col-span-8">
+        <div class="glass rounded-2xl p-4 sm:p-5">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <h2 class="text-base sm:text-lg font-semibold">Your Videos</h2>
+              <p class="text-sm text-white/70 mt-1">Tap a card to play. Use the menu to rename, download, or delete.</p>
+            </div>
+            <div class="hidden sm:flex items-center gap-2">
+              <span class="kbd rounded-xl px-2.5 py-1.5 text-xs text-white/70">Ctrl</span>
+              <span class="text-xs text-white/55">+</span>
+              <span class="kbd rounded-xl px-2.5 py-1.5 text-xs text-white/70">K</span>
+              <span class="text-xs text-white/55">Search</span>
+            </div>
+          </div>
+
+          <div id="emptyState" class="mt-6 rounded-2xl border border-white/10 bg-white/5 p-6 sm:p-8">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div class="h-12 w-12 rounded-2xl flex items-center justify-center"
+                   style="background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.04)); border: 1px solid rgba(255,255,255,.12);">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 5v14" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                  <path d="M5 12h14" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="min-w-0">
+                <div class="font-semibold">No videos saved yet</div>
+                <div class="text-sm text-white/70 mt-1">Upload your first video on the left. It will stay here after refresh.</div>
+              </div>
+            </div>
+          </div>
+
+          <div id="grid" class="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+
+          <div id="loading" class="mt-5 hidden">
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div class="rounded-xl h-36 skeleton"></div>
+                <div class="mt-3 h-4 w-3/4 rounded skeleton"></div>
+                <div class="mt-2 h-3 w-1/2 rounded skeleton"></div>
+              </div>
+              <div class="rounded-2xl border border-white/10 bg-white/5 p-4 hidden sm:block">
+                <div class="rounded-xl h-36 skeleton"></div>
+                <div class="mt-3 h-4 w-3/4 rounded skeleton"></div>
+                <div class="mt-2 h-3 w-1/2 rounded skeleton"></div>
+              </div>
+              <div class="rounded-2xl border border-white/10 bg-white/5 p-4 hidden xl:block">
+                <div class="rounded-xl h-36 skeleton"></div>
+                <div class="mt-3 h-4 w-3/4 rounded skeleton"></div>
+                <div class="mt-2 h-3 w-1/2 rounded skeleton"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="mt-6 text-center text-xs text-white/50">
+          <div>Made for private, offline-friendly personal storage (browser-based). For unlimited lifetime cloud sharing, you would need hosting/server storage.</div>
+        </footer>
+      </section>
+    </main>
+  </div>
+
+  <!-- Player Modal -->
+  <div id="playerModal" class="fixed inset-0 hidden items-center justify-center z-50">
+    <div class="modal-backdrop absolute inset-0"></div>
+    <div class="relative w-[min(980px,94vw)] max-h-[88vh] glass rounded-2xl overflow-hidden shadow-[0_30px_90px_rgba(0,0,0,.6)] border border-white/10">
+      <div class="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-white/10 bg-white/5">
+        <div class="min-w-0">
+          <div id="playerTitle" class="font-semibold line-clamp-1">Video</div>
+          <div id="playerMeta" class="text-xs text-white/60 mt-0.5">—</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnDownloadFromModal" class="btn rounded-xl px-3.5 py-2 text-sm font-semibold">Download</button>
+          <button id="btnClosePlayer" class="btn rounded-xl px-3.5 py-2 text-sm font-semibold">Close</button>
+        </div>
+      </div>
+      <div class="p-3 sm:p-4">
+        <video id="player" class="w-full rounded-xl bg-black/50 border border-white/10" controls playsinline></video>
+      </div>
+      <div class="px-4 sm:px-5 pb-4 sm:pb-5">
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btnRenameFromModal" class="btn rounded-xl px-3.5 py-2 text-sm font-semibold">Rename</button>
+          <button id="btnDeleteFromModal" class="btn rounded-xl px-3.5 py-2 text-sm font-semibold" style="border-color: rgba(239,68,68,.35); background: linear-gradient(180deg, rgba(239,68,68,.16), rgba(255,255,255,.05));">
+            Delete
+          </button>
+          <div class="ml-auto text-xs text-white/55">
+            Press <span class="kbd rounded-lg px-2 py-1">Esc</span> to close
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Modal -->
+  <div id="helpModal" class="fixed inset-0 hidden items-center justify-center z-50">
+    <div class="modal-backdrop absolute inset-0"></div>
+    <div class="relative w-[min(860px,94vw)] max-h-[88vh] glass rounded-2xl overflow-hidden border border-white/10">
+      <div class="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-white/10 bg-white/5">
+        <div class="font-semibold">Help & Notes</div>
+        <button id="btnCloseHelp" class="btn rounded-xl px-3.5 py-2 text-sm font-semibold">Close</button>
+      </div>
+      <div class="p-4 sm:p-5 text-sm text-white/80 space-y-4 overflow-auto max-h-[72vh]">
+        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div class="font-semibold text-white/90">Will my videos stay after refresh?</div>
+          <div class="mt-1 text-white/70">
+            Yes. This site saves your videos in your browser storage (IndexedDB). Refresh/back won’t remove them.
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div class="font-semibold text-white/90">Can my friends see my videos by opening this site link?</div>
+          <div class="mt-1 text-white/70">
+            Not automatically. Without a server, your videos live only on your device.
+            To share, use <span class="text-white/90 font-semibold">Export Vault</span> to create a .zip and send it to friends. They can <span class="text-white/90 font-semibold">Import</span> it here.
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div class="font-semibold text-white/90">Is there a size limit?</div>
+          <div class="mt-1 text-white/70">
+            Browsers have storage limits. If saving fails, export a backup and free space or use fewer/lower-size videos.
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div class="font-semibold text-white/90">Best practice</div>
+          <ul class="mt-2 text-white/70 list-disc pl-5 space-y-1">
+            <li>Export your Vault regularly for backup.</li>
+            <li>Keep originals elsewhere if the videos are important.</li>
+            <li>Use clear names (date + event) for easy searching.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-5 z-[60] hidden">
+    <div class="glass rounded-2xl px-4 py-3 border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,.55)]">
+      <div id="toastText" class="text-sm text-white/90"></div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Utilities ----------
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+    const formatBytes = (bytes) => {
+      if (!Number.isFinite(bytes) || bytes <= 0) return "0 MB";
+      const units = ["B","KB","MB","GB","TB"];
+      let i = 0, v = bytes;
+      while (v >= 1024 && i < units.length-1) { v /= 1024; i++; }
+      return `${(i===0 ? v.toFixed(0) : v.toFixed(v < 10 ? 2 : 1))} ${units[i]}`;
+    };
+
+    const extFromType = (type) => {
+      if (!type) return "mp4";
+      const map = {
+        "video/mp4": "mp4",
+        "video/webm": "webm",
+        "video/quicktime": "mov",
+        "video/x-matroska": "mkv",
+        "video/ogg": "ogv",
+        "video/3gpp": "3gp",
+        "video/3gpp2": "3g2"
+      };
+      return map[type] || (type.includes("/") ? type.split("/")[1].replace("x-","") : "mp4");
+    };
+
+    const prettyDate = (ts) => {
+      try {
+        return new Date(ts).toLocaleString(undefined, { year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+      } catch { return "—"; }
+    };
+
+    const toast = (() => {
+      let t = null, hideTimer = null;
+      return (msg, ms=2400) => {
+        clearTimeout(hideTimer);
+        $("#toastText").textContent = msg;
+        $("#toast").classList.remove("hidden");
+        $("#toast").classList.add("fade-in");
+        hideTimer = setTimeout(() => {
+          $("#toast").classList.add("hidden");
+          $("#toast").classList.remove("fade-in");
+        }, ms);
+      };
+    })();
+
+    // ---------- IndexedDB ----------
+    const DB_NAME = "LifetimeVideoVault";
+    const DB_VERSION = 1;
+    const STORE = "videos";
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(STORE)) {
+            const store = db.createObjectStore(STORE, { keyPath: "id", autoIncrement: true });
+            store.createIndex("name", "name", { unique: false });
+            store.createIndex("createdAt", "createdAt", { unique: false });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function txStore(mode="readonly") {
+      const db = await openDB();
+      const tx = db.transaction(STORE, mode);
+      const store = tx.objectStore(STORE);
+      return { db, tx, store };
+    }
+
+    async function addVideoRecord({ name, blob, type, size, createdAt, posterBlob }) {
+      const { db, tx, store } = await txStore("readwrite");
+      return new Promise((resolve, reject) => {
+        const req = store.add({ name, blob, type, size, createdAt, posterBlob: posterBlob || null });
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+        tx.oncomplete = () => db.close();
+        tx.onerror = () => { try { db.close(); } catch {} };
+      });
+    }
+
+    async function getAllVideos() {
+      const { db, tx, store } = await txStore("readonly");
+      return new Promise((resolve, reject) => {
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+        tx.oncomplete = () => db.close();
+      });
+    }
+
+    async function getVideoById(id) {
+      const { db, tx, store } = await txStore("readonly");
+      return new Promise((resolve, reject) => {
+        const req = store.get(id);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+        tx.oncomplete = () => db.close();
+      });
+    }
+
+    async function updateVideo(id, patch) {
+      const existing = await getVideoById(id);
+      if (!existing) return false;
+      const updated = { ...existing, ...patch };
+      const { db, tx, store } = await txStore("readwrite");
+      return new Promise((resolve, reject) => {
+        const req = store.put(updated);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+        tx.oncomplete = () => db.close();
+      });
+    }
+
+    async function deleteVideo(id) {
+      const { db, tx, store } = await txStore("readwrite");
+      return new Promise((resolve, reject) => {
+        const req = store.delete(id);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+        tx.oncomplete = () => db.close();
+      });
+    }
+
+    // ---------- Thumbnail generation (optional best-effort) ----------
+    async function createPosterBlobFromVideo(file) {
+      try {
+        const url = URL.createObjectURL(file);
+        const video = document.createElement("video");
+        video.preload = "metadata";
+        video.muted = true;
+        video.playsInline = true;
+        video.src = url;
+
+        await new Promise((res, rej) => {
+          const to = setTimeout(() => rej(new Error("timeout")), 5000);
+          video.onloadedmetadata = () => { clearTimeout(to); res(); };
+          video.onerror = () => { clearTimeout(to); rej(new Error("load error")); };
+        });
+
+        const seekTo = Math.min(1, Math.max(0, (video.duration || 0) * 0.05));
+        try { video.currentTime = seekTo; } catch {}
+
+        await new Promise((res, rej) => {
+          const to = setTimeout(() => res(), 2500); // if seek fails, just skip
+          video.onseeked = () => { clearTimeout(to); res(); };
+          video.onerror = () => { clearTimeout(to); res(); };
+        });
+
+        const canvas = document.createElement("canvas");
+        const w = Math.max(320, Math.min(960, video.videoWidth || 640));
+        const h = Math.round(w * ((video.videoHeight || 360) / (video.videoWidth || 640)));
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, w, h);
+
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.78));
+        URL.revokeObjectURL(url);
+        return blob || null;
+      } catch {
+        return null;
+      }
+    }
+
+    // ---------- UI state ----------
+    let all = [];
+    let filtered = [];
+    let currentId = null;
+    let currentObjectUrl = null;
+    let currentDownloadBlob = null;
+
+    function setLoading(v) {
+      $("#loading").classList.toggle("hidden", !v);
+    }
+
+    function setEmpty(v) {
+      $("#emptyState").classList.toggle("hidden", !v);
+    }
+
+    function cleanupPlayerObjectUrl() {
+      if (currentObjectUrl) {
+        try { URL.revokeObjectURL(currentObjectUrl); } catch {}
+        currentObjectUrl = null;
+      }
+    }
+
+    function closePlayer() {
+      cleanupPlayerObjectUrl();
+      currentDownloadBlob = null;
+      currentId = null;
+      $("#player").removeAttribute("src");
+      $("#player").load();
+      $("#playerModal").classList.add("hidden");
+      $("#playerModal").classList.remove("flex");
+      document.body.style.overflow = "";
+    }
+
+    function openPlayer() {
+      $("#playerModal").classList.remove("hidden");
+      $("#playerModal").classList.add("flex");
+      document.body.style.overflow = "hidden";
+    }
+
+    function openHelp() {
+      $("#helpModal").classList.remove("hidden");
+      $("#helpModal").classList.add("flex");
+      document.body.style.overflow = "hidden";
+    }
+    function closeHelp() {
+      $("#helpModal").classList.add("hidden");
+      $("#helpModal").classList.remove("flex");
+      document.body.style.overflow = "";
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function cardTemplate(v) {
+      const created = prettyDate(v.createdAt);
+      const size = formatBytes(v.size);
+      const hasPoster = !!v.posterBlob;
+      const posterUrl = hasPoster ? URL.createObjectURL(v.posterBlob) : null;
+
+      // We'll revoke poster URLs after image load (or if fail)
+      const id = v.id;
+      const safeName = escapeHtml(v.name || "Untitled");
+      const ext = extFromType(v.type);
+      const typeLabel = (v.type || "video").split("/")[1] ? (v.type.split("/")[1].toUpperCase()) : "VIDEO";
+
+      return `
+        <article class="group rounded-2xl border border-white/10 bg-white/5 overflow-hidden hover:bg-white/[0.07] transition-colors">
+          <button class="w-full text-left" data-action="play" data-id="${id}" aria-label="Play ${safeName}">
+            <div class="relative">
+              <div class="h-40 sm:h-44 w-full ${hasPoster ? "" : "bg-gradient-to-br from-violet-500/20 via-cyan-500/15 to-emerald-500/10"} border-b border-white/10 overflow-hidden">
+                ${hasPoster ? `
+                  <img data-poster-id="${id}" class="w-full h-full object-cover opacity-95 group-hover:opacity-100 transition-opacity" alt="" />
+                ` : `
+                  <div class="h-full w-full flex items-center justify-center">
+                    <div class="flex items-center gap-2 text-white/80">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M10 9.5v5l4-2.5-4-2.5Z" fill="currentColor"/>
+                        <path d="M4 7.5a3.5 3.5 0 0 1 3.5-3.5h9A3.5 3.5 0 0 1 20 7.5v9A3.5 3.5 0 0 1 16.5 20h-9A3.5 3.5 0 0 1 4 16.5v-9Z" stroke="currentColor" stroke-width="1.7"/>
+                      </svg>
+                      <span class="text-sm font-semibold tracking-wide">${typeLabel}</span>
+                    </div>
+                  </div>
+                `}
+              </div>
+
+              <div class="absolute top-3 left-3 flex items-center gap-2">
+                <span class="badge rounded-xl px-2.5 py-1 text-xs text-white/80">${typeLabel}</span>
+                <span class="badge rounded-xl px-2.5 py-1 text-xs text-white/70">${size}</span>
+              </div>
+
+              <div class="absolute bottom-3 right-3">
+                <div class="h-10 w-10 rounded-2xl flex items-center justify-center border border-white/15 bg-black/30 shadow-[0_12px_30px_rgba(0,0,0,.35)]">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M10 9.5v5l4-2.5-4-2.5Z" fill="white"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-4">
+              <div class="font-semibold leading-tight line-clamp-1">${safeName}</div>
+              <div class="mt-1 text-xs text-white/60">${created}</div>
+            </div>
+          </button>
+
+          <div class="px-4 pb-4 flex items-center gap-2">
+            <button class="btn rounded-xl px-3 py-2 text-xs font-semibold" data-action="download" data-id="${id}">Download</button>
+            <button class="btn rounded-xl px-3 py-2 text-xs font-semibold" data-action="rename" data-id="${id}">Rename</button>
+            <button class="btn rounded-xl px-3 py-2 text-xs font-semibold ml-auto"
+              data-action="delete" data-id="${id}"
+              style="border-color: rgba(239,68,68,.35); background: linear-gradient(180deg, rgba(239,68,68,.16), rgba(255,255,255,.05));">
+              Delete
+            </button>
+          </div>
+        </article>
+      `.trim();
+    }
+
+    function render(list) {
+      $("#countVideos").textContent = String(list.length);
+      const totalBytes = all.reduce((s,v)=> s + (v.size || 0), 0);
+      $("#storedSize").textContent = formatBytes(totalBytes);
+
+      setEmpty(all.length === 0);
+      const grid = $("#grid");
+      grid.innerHTML = list.map(cardTemplate).join("");
+
+      // Attach posters safely and revoke URLs
+      for (const v of list) {
+        if (!v.posterBlob) continue;
+        const img = grid.querySelector(`img[data-poster-id="${v.id}"]`);
+        if (!img) continue;
+        const url = URL.createObjectURL(v.posterBlob);
+        img.src = url;
+        const revoke = () => { try { URL.revokeObjectURL(url); } catch {} };
+        img.onload = revoke;
+        img.onerror = revoke;
+      }
+    }
+
+    function applySearch() {
+      const q = ($("#searchInput").value || "").trim().toLowerCase();
+      if (!q) {
+        filtered = [...all].sort((a,b) => (b.createdAt||0)-(a.createdAt||0));
+      } else {
+        filtered = all
+          .filter(v => (v.name || "").toLowerCase().includes(q))
+          .sort((a,b) => (b.createdAt||0)-(a.createdAt||0));
+      }
+      render(filtered);
+    }
+
+    async function refreshList() {
+      setLoading(true);
+      try {
+        all = await getAllVideos();
+      } catch (e) {
+        console.error(e);
+        toast("Could not load saved videos.");
+        all = [];
+      } finally {
+        setLoading(false);
+      }
+      applySearch();
+      await refreshStorageEstimate();
+    }
+
+    // ---------- Storage estimate ----------
+    async function refreshStorageEstimate() {
+      const el = $("#storageText");
+      const bar = $("#storageBar");
+      try {
+        if (!navigator.storage || !navigator.storage.estimate) {
+          el.textContent = "Storage estimate not supported in this browser.";
+          bar.style.width = "0%";
+          return;
+        }
+        const { usage, quota } = await navigator.storage.estimate();
+        const u = usage || 0;
+        const q = quota || 0;
+        const pct = q ? Math.min(100, Math.round((u / q) * 100)) : 0;
+        bar.style.width = pct + "%";
+        el.textContent = `Used ${formatBytes(u)} of ${formatBytes(q)} (${pct}%).`;
+      } catch {
+        el.textContent = "Could not estimate storage.";
+        bar.style.width = "0%";
+      }
+    }
+
+    // ---------- Actions ----------
+    async function saveNewVideo() {
+      const name = ($("#videoName").value || "").trim();
+      const file = $("#videoFile").files && $("#videoFile").files[0];
+
+      if (!name) { toast("Please enter a video name."); $("#videoName").focus(); return; }
+      if (!file) { toast("Please choose a video file."); $("#videoFile").focus(); return; }
+      if (!file.type.startsWith("video/")) { toast("Please choose a valid video file."); return; }
+
+      $("#btnSave").disabled = true;
+      $("#btnSave").textContent = "Saving…";
+      try {
+        const posterBlob = await createPosterBlobFromVideo(file);
+        const createdAt = Date.now();
+        await addVideoRecord({
+          name,
+          blob: file,
+          type: file.type || "video/mp4",
+          size: file.size || 0,
+          createdAt,
+          posterBlob
+        });
+        toast("Saved to Vault.");
+        clearUpload();
+        await refreshList();
+      } catch (e) {
+        console.error(e);
+        toast("Save failed. Storage may be full. Try exporting and reducing files.");
+      } finally {
+        $("#btnSave").disabled = false;
+        $("#btnSave").textContent = "Save to Vault";
+      }
+    }
+
+    function clearUpload() {
+      $("#videoName").value = "";
+      $("#videoFile").value = "";
+      $("#fileMeta").classList.add("hidden");
+      $("#fileMeta").textContent = "";
+      $("#videoName").focus();
+    }
+
+    async function playById(id) {
+      const v = await getVideoById(id);
+      if (!v) { toast("Video not found."); return; }
+
+      cleanupPlayerObjectUrl();
+      currentId = id;
+      currentDownloadBlob = v.blob;
+
+      $("#playerTitle").textContent = v.name || "Untitled";
+      $("#playerMeta").textContent = `${prettyDate(v.createdAt)} • ${formatBytes(v.size)} • ${(v.type || "video")}`;
+
+      currentObjectUrl = URL.createObjectURL(v.blob);
+      $("#player").src = currentObjectUrl;
+      openPlayer();
+      try { await $("#player").play(); } catch {}
+    }
+
+    async function downloadById(id) {
+      const v = await getVideoById(id);
+      if (!v) { toast("Video not found."); return; }
+      downloadBlob(v.blob, `${(v.name || "video").replace(/[\\/:*?"<>|]/g,"_")}.${extFromType(v.type)}`);
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => { try { URL.revokeObjectURL(url); } catch {} }, 1500);
+    }
+
+    async function renameById(id) {
+      const v = await getVideoById(id);
+      if (!v) { toast("Video not found."); return; }
+      const next = prompt("Rename video:", v.name || "");
+      if (next === null) return;
+      const name = String(next).trim();
+      if (!name) { toast("Name cannot be empty."); return; }
+      await updateVideo(id, { name });
+      toast("Renamed.");
+      await refreshList();
+      if (currentId === id) $("#playerTitle").textContent = name;
+    }
+
+    async function deleteById(id) {
+      const v = await getVideoById(id);
+      if (!v) { toast("Video not found."); return; }
+      const ok = confirm(`Delete "${v.name || "Untitled"}"? This cannot be undone.`);
+      if (!ok) return;
+      await deleteVideo(id);
+      toast("Deleted.");
+      if (currentId === id) closePlayer();
+      await refreshList();
+    }
+
+    // ---------- Export / Import (ZIP) ----------
+    async function exportVaultZip() {
+      const list = await getAllVideos();
+      if (!list.length) { toast("No videos to export."); return null; }
+
+      const zip = new JSZip();
+      const manifest = {
+        app: "LifetimeVideoVault",
+        version: 1,
+        exportedAt: Date.now(),
+        items: []
+      };
+
+      for (const v of list) {
+        const ext = extFromType(v.type);
+        const safeBase = (v.name || `video-${v.id}`).replace(/[\\/:*?"<>|]/g,"_").slice(0, 80);
+        const filename = `${safeBase}__id${v.id}.${ext}`;
+        zip.file(`videos/${filename}`, v.blob);
+
+        if (v.posterBlob) {
+          zip.file(`posters/${safeBase}__id${v.id}.jpg`, v.posterBlob);
+        }
+
+        manifest.items.push({
+          name: v.name || "Untitled",
+          type: v.type || "video/mp4",
+          size: v.size || 0,
+          createdAt: v.createdAt || Date.now(),
+          videoPath: `videos/${filename}`,
+          posterPath: v.posterBlob ? `posters/${safeBase}__id${v.id}.jpg` : null
+        });
+      }
+
+      zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+
+      const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+      const outName = `LifetimeVideoVault_${new Date().toISOString().slice(0,10)}.zip`;
+      return { blob, filename: outName };
+    }
+
+    async function doExport(downloadOnly = true) {
+      $("#btnExport").disabled = true;
+      $("#btnExportShare").disabled = true;
+      try {
+        toast("Preparing export…", 1600);
+        const pack = await exportVaultZip();
+        if (!pack) return null;
+        if (downloadOnly) {
+          downloadBlob(pack.blob, pack.filename);
+          toast("Export downloaded.");
+        }
+        return pack;
+      } catch (e) {
+        console.error(e);
+        toast("Export failed.");
+        return null;
+      } finally {
+        $("#btnExport").disabled = false;
+        $("#btnExportShare").disabled = false;
+      }
+    }
+
+    async function doExportAndShare() {
+      const pack = await doExport(false);
+      if (!pack) return;
+
+      const file = new File([pack.blob], pack.filename, { type: "application/zip" });
+
+      // Try Web Share API (mobile)
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ title: "My Video Vault", text: "Import this Vault zip to view all videos.", files: [file] });
+          toast("Share opened.");
+          return;
+        } catch {
+          // user cancelled or failed
+        }
+      }
+
+      // fallback to download
+      downloadBlob(pack.blob, pack.filename);
+      toast("Downloaded export (share manually).");
+    }
+
+    async function importVaultZip(file) {
+      if (!file) return;
+      if (!String(file.name || "").toLowerCase().endsWith(".zip")) {
+        toast("Please select a .zip Vault file.");
+        return;
+      }
+
+      $("#importInput").disabled = true;
+      toast("Importing…", 2000);
+      try {
+        const zip = await JSZip.loadAsync(file);
+        const manifestFile = zip.file("manifest.json");
+        if (!manifestFile) { toast("Invalid vault: manifest.json not found."); return; }
+        const manifestText = await manifestFile.async("string");
+        const manifest = JSON.parse(manifestText);
+
+        const items = Array.isArray(manifest.items) ? manifest.items : [];
+        if (!items.length) { toast("Vault is empty."); return; }
+
+        let imported = 0;
+        for (const it of items) {
+          const vFile = zip.file(it.videoPath);
+          if (!vFile) continue;
+          const blob = await vFile.async("blob");
+          const posterBlob = it.posterPath ? (await zip.file(it.posterPath)?.async("blob").catch(()=>null)) : null;
+
+          const name = String(it.name || "Imported video").trim().slice(0,80);
+          const type = it.type || blob.type || "video/mp4";
+          const size = it.size || blob.size || 0;
+          const createdAt = it.createdAt || Date.now();
+
+          try {
+            await addVideoRecord({ name, blob, type, size, createdAt, posterBlob: posterBlob || null });
+            imported++;
+          } catch (e) {
+            console.error(e);
+            toast("Import stopped (storage may be full).");
+            break;
+          }
+        }
+
+        toast(`Imported ${imported} video${imported===1 ? "" : "s"}.`);
+        await refreshList();
+      } catch (e) {
+        console.error(e);
+        toast("Import failed. The zip may be corrupted.");
+      } finally {
+        $("#importInput").disabled = false;
+        $("#importInput").value = "";
+      }
+    }
+
+    // ---------- Events ----------
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-action]");
+      if (!btn) return;
+      const action = btn.getAttribute("data-action");
+      const id = Number(btn.getAttribute("data-id"));
+      if (!id) return;
+
+      if (action === "play") await playById(id);
+      if (action === "download") await downloadById(id);
+      if (action === "rename") await renameById(id);
+      if (action === "delete") await deleteById(id);
+    });
+
+    $("#btnSave").addEventListener("click", saveNewVideo);
+    $("#btnClear").addEventListener("click", clearUpload);
+    $("#searchInput").addEventListener("input", applySearch);
+
+    $("#videoFile").addEventListener("change", () => {
+      const file = $("#videoFile").files && $("#videoFile").files[0];
+      if (!file) {
+        $("#fileMeta").classList.add("hidden");
+        $("#fileMeta").textContent = "";
+        return;
+      }
+      $("#fileMeta").classList.remove("hidden");
+      $("#fileMeta").textContent = `${file.name} • ${formatBytes(file.size)} • ${(file.type || "video")}`;
+      if (!($("#videoName").value || "").trim()) {
+        const base = (file.name || "My Video").replace(/\.[^/.]+$/, "");
+        $("#videoName").value = base.slice(0,80);
+      }
+    });
+
+    $("#btnClosePlayer").addEventListener("click", closePlayer);
+    $("#playerModal").addEventListener("click", (e) => {
+      if (e.target === $("#playerModal") || e.target.classList.contains("modal-backdrop")) closePlayer();
+    });
+
+    $("#btnDownloadFromModal").addEventListener("click", () => {
+      if (!currentDownloadBlob) return;
+      const name = ($("#playerTitle").textContent || "video").replace(/[\\/:*?"<>|]/g,"_");
+      const ext = currentId ? null : null;
+      // Attempt to infer extension from current blob type
+      const inferredExt = extFromType((currentDownloadBlob && currentDownloadBlob.type) || "video/mp4");
+      downloadBlob(currentDownloadBlob, `${name}.${inferredExt}`);
+    });
+
+    $("#btnRenameFromModal").addEventListener("click", async () => {
+      if (!currentId) return;
+      await renameById(currentId);
+    });
+
+    $("#btnDeleteFromModal").addEventListener("click", async () => {
+      if (!currentId) return;
+      await deleteById(currentId);
+    });
+
+    $("#btnExport").addEventListener("click", () => doExport(true));
+    $("#btnExportShare").addEventListener("click", doExportAndShare);
+
+    $("#importInput").addEventListener("change", async (e) => {
+      const f = e.target.files && e.target.files[0];
+      await importVaultZip(f);
+    });
+
+    $("#btnHelp").addEventListener("click", openHelp);
+    $("#btnCloseHelp").addEventListener("click", closeHelp);
+    $("#helpModal").addEventListener("click", (e) => {
+      if (e.target === $("#helpModal") || e.target.classList.contains("modal-backdrop")) closeHelp();
+    });
+
+    $("#btnEstimate").addEventListener("click", refreshStorageEstimate);
+
+    $("#btnCopyLink").addEventListener("click", async () => {
+      const url = location.href;
+      try {
+        await navigator.clipboard.writeText(url);
+        toast("Site link copied.");
+      } catch {
+        prompt("Copy this link:", url);
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        if (!$("#helpModal").classList.contains("hidden")) closeHelp();
+        else if (!$("#playerModal").classList.contains("hidden")) closePlayer();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        $("#searchInput").focus();
+      }
+    });
+
+    // ---------- Init ----------
+    (async function init() {
+      setLoading(true);
+      try {
+        await openDB();
+      } catch (e) {
+        console.error(e);
+        toast("IndexedDB not available. This browser may not support saving videos.");
+      } finally {
+        setLoading(false);
+      }
+      await refreshList();
+      await refreshStorageEstimate();
+    })();
+  </script>
+</body>
+</html>
